@@ -143,12 +143,45 @@ def squareSpiral(startX,startY, spacing, limit):
 
 ### SEARCH ###
 
+def search_pixels(blobs, xdim, ydim):
+    for centerY in range(ydim):
+        for centerX in range(xdim):
+
+            goodEnough = (cD(image[centerY][centerX]) <= maxColDis)
+
+            if goodEnough:
+                dupe = 0
+                for blob in blobs:
+                    if (blob[0]-centerX)**2 + (blob[1]-centerY)**2 <= blob[2]**2*1.5:
+                        dupe = 1
+                        break
+
+                if not dupe:
+                    yield centerX, centerY
+
+def search_spacedPixels(blobs, xdim, ydim, spacing=1):
+    for y in range(ydim//spacing):
+        for x in range(xdim//spacing):
+
+            centerX = x*spacing
+            centerY = y*spacing
+
+            goodEnough = (cD(image[centerY][centerX]) <= maxColDis)
+
+            if goodEnough:
+                dupe = 0
+                for blob in blobs:
+                    if (blob[0]-centerX)**2 + (blob[1]-centerY)**2 <= blob[2]**2*1.5:
+                        dupe = 1
+                        break
+
+                if not dupe:
+                    yield centerX, centerY
+
 def search_squareSpiral(blobs, xdim, ydim, spacing=1):
     startX = xdim//2
     startY = ydim//2
-##    radLimit = min(xdim,ydim)
 
-##    blobs = [] #blobs will be stored as [x,y,r]
     spiral = squareSpiral(startX,startY, spacing, min(xdim,ydim)//(2*spacing)-1)
 
     while 1:
@@ -170,16 +203,63 @@ def search_squareSpiral(blobs, xdim, ydim, spacing=1):
             if not dupe:
                 yield centerX, centerY
 
+def search_rectQuadsection(blobs, xdim, ydim, spacing=1):
+    quads = [ [[0,0],[xdim-1,ydim-1]] ]
+
+    while len(quads):
+        quad = quads.pop(0)
+        centerX = (quad[0][0]+quad[1][0])//2
+        centerY = (quad[0][1]+quad[1][1])//2
+
+        if cD(image[centerY][centerX]) <= maxColDis:
+            dupe = 0
+            for blob in blobs:
+                if (blob[0]-centerX)**2 + (blob[1]-centerY)**2 <= blob[2]**2*1.5:
+                    dupe = 1
+                    break
+
+            if not dupe:
+                yield centerX,centerY
+
+        if abs(quad[0][0]-quad[1][0]) > 2*spacing and abs(quad[0][1]-quad[1][1]) > 2*spacing:
+            quads.append([[centerX,centerY],[quad[0][0],quad[0][1]]])
+            quads.append([[centerX,centerY],[quad[0][0],quad[1][1]]])
+            quads.append([[centerX,centerY],[quad[1][0],quad[0][1]]])
+            quads.append([[centerX,centerY],[quad[1][0],quad[1][1]]])
 
 
 ### SURVEY ###
+
+def survey_floodFill(sX,sY):
+    cX,cY,cR = (None,None,None)
+
+    queue = [[sX,sY]]
+    q = 0
+    while q < len(queue):
+        qx,qy = queue[q]
+        
+        for dx,dy in [[1,0],[0,1],[-1,0],[0,-1]]:
+            x2, y2 = qx+dx, qy+dy
+
+            if cD(image[y2][x2]) <= maxColDis:
+                image[y2][x2] = col(255,0,0)
+                queue.append([x2,y2])
+
+        q += 1
+
+    sumX,sumY = list(map(sum, zip(*queue)))
+    cX, cY = round(sumX/q), round(sumY/q)
+    cR = round(sqrt( q/pi ))
+
+    #image[cY][cX] = col(0,0,255)
+
+    return (cX,cY,cR)
 
 def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also "minRadius"
     cX,cY,cR = (None,None,None)
     
     for k in range(numIterations): #refines circumcircle estimate by using prior guess
         vertices = []
-        #image[centerY][centerX] = col(255,0,0)
 
         for dx,dy in [[1,0],[0,1],[-1,0],[0,-1]]:
             pX = sX+dx
@@ -202,7 +282,7 @@ def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also
         avgY = (c1[1]+c2[1]+c3[1]+c4[1])/4
         avgR = (c1[2]+c2[2]+c3[2]+c4[2])/4
 
-        c5 = [avgX,avgY,avgR]
+        c5 = [round(avgX),round(avgY),round(avgR)]
         cX,cY,cR = c5
 
         sX = cX
@@ -232,10 +312,14 @@ origImage, xdim,ydim, frame = getVideoFrame(VIDEO_PATH)
 imgEnd = clock() - imgStart
 print("Time to get frame: %.3f seconds." % imgEnd)
 
-search_algs = [['square spiral', search_squareSpiral, minRadius],
+search_algs = [['pixel by pixel', search_pixels],
+               ['pixels spaced apart', search_spacedPixels, minRadius],
+               ['square spiral', search_squareSpiral, minRadius],
+               ['rectangular quadsection', search_rectQuadsection, minRadius],
                ]
 
-survey_algs = [['circumcircle', survey_circumcircle],
+survey_algs = [['flood fill', survey_floodFill],
+               ['circumcircle', survey_circumcircle],
                ]
 
 for search_alg in search_algs:
@@ -298,5 +382,5 @@ for search_alg in search_algs:
 ### the total time. Not that much. I'll go with accuracy over speed here.
 
 
-plt.imshow(image)
-plt.show()
+#plt.imshow(image)
+#plt.show()
