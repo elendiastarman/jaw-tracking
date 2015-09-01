@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import sqrt, cos, sin, pi
 from time import clock
+from copy import deepcopy
 
 def getVideoFrame(VIDEO_PATH, xdim=800, ydim=600, frame=60):
     FFMPEG_BIN = r"C:\Python33\Lib\ffmpeg-20140713-git-42c1cc3-win64-static\bin\ffmpeg.exe"
@@ -140,13 +141,15 @@ def squareSpiral(startX,startY, spacing, limit):
 
 
 
-def search_squareSpiral(blobs, minRadius, xdim, ydim):
+### SEARCH ###
+
+def search_squareSpiral(blobs, xdim, ydim, spacing=1):
     startX = xdim//2
     startY = ydim//2
 ##    radLimit = min(xdim,ydim)
 
 ##    blobs = [] #blobs will be stored as [x,y,r]
-    spiral = squareSpiral(startX,startY, minRadius, min(xdim,ydim)//(2*minRadius)-1)
+    spiral = squareSpiral(startX,startY, spacing, min(xdim,ydim)//(2*spacing)-1)
 
     while 1:
 
@@ -166,6 +169,10 @@ def search_squareSpiral(blobs, minRadius, xdim, ydim):
 
             if not dupe:
                 yield centerX, centerY
+
+
+
+### SURVEY ###
 
 def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also "minRadius"
     cX,cY,cR = (None,None,None)
@@ -190,10 +197,6 @@ def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also
         c3 = circumcircle(v[0],v[2],v[3])
         c4 = circumcircle(v[1],v[2],v[3])
 
-##        if k == numIterations-1:
-##            for guess in [c1,c2,c3,c4]:
-##                image[guess[1]][guess[0]] = col(255,255,0)
-
         #average them
         avgX = (c1[0]+c2[0]+c3[0]+c4[0])/4
         avgY = (c1[1]+c2[1]+c3[1]+c4[1])/4
@@ -205,8 +208,6 @@ def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also
         sX = cX
         sY = cY
 
-##    if cR >= minRadius:
-##        blobs.append( [cX,cY,cR] )
 
     if showVerts and cR >= showVerts:
         image[cY][cX] = col(0,0,255)
@@ -215,9 +216,9 @@ def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also
 
     return (cX,cY,cR)
 
-##    return (cX,cY,cR)
 
-### The actual start of the program
+
+### The actual start of the program ###
 
 VIDEO_PATH = r".\Demo vids 1\demovid1_left0001-0075.mp4"
 
@@ -227,53 +228,69 @@ minRadius = 6 #pixels
 maxColDis = 40
 
 imgStart = clock()
-image, xdim,ydim, frame = getVideoFrame(VIDEO_PATH)
+origImage, xdim,ydim, frame = getVideoFrame(VIDEO_PATH)
 imgEnd = clock() - imgStart
 print("Time to get frame: %.3f seconds." % imgEnd)
 
-print("Ready to search!")
-startTime = clock()
-times = []
+search_algs = [['square spiral', search_squareSpiral, minRadius],
+               ]
 
-blobs = []
-search = search_squareSpiral(blobs, minRadius, xdim,ydim)
+survey_algs = [['circumcircle', survey_circumcircle],
+               ]
 
-while 1:
-    try:
-        sx,sy = next(search)
-    except StopIteration:
-        break
+for search_alg in search_algs:
+    for survey_alg in survey_algs:
 
-    surveyStart = clock()
-    blob = survey_circumcircle(sx,sy)
-    surveyEnd = clock()
-    times.append(surveyEnd - surveyStart)
+        image = deepcopy(origImage)
 
-    if blob[2] >= minRadius: blobs.append(blob)
+        print()
+        print("Search algorithm: %s" % search_alg[0])
+        print("Survey algorithm: %s" % survey_alg[0])
 
-endTime = clock()
-print("All done in %.3f seconds!" % (endTime-startTime))
-print()
+        startTime = clock()
+        times = []
 
-for i,t in enumerate(times):
-    print("Blob %d was surveyed in %.3f seconds." % (i,t))
-print()
+        blobs = []
+        search = search_alg[1](blobs, xdim,ydim, *search_alg[2:])
 
-print("Search took about %.3f seconds." % (endTime-startTime - sum(times)))
-print()
+        while 1:
+            try:
+                sx,sy = next(search)
+            except StopIteration:
+                break
 
-print("Color distance code timing:")
-cdStart = clock()
-num = 0
-for dx in range(xdim//minRadius):
-    for dy in range(ydim//minRadius):
-        num += 1
-        eh = (cD(image[dy*minRadius][dx*minRadius]) <= maxColDis)
-##        col = image[dy*minRadius][dx*minRadius]
-##        eh = (cD(col) == 1)
+            surveyStart = clock()
+            blob = survey_alg[1](sx,sy)
+            surveyEnd = clock()
+            times.append(surveyEnd - surveyStart)
+
+            if blob[2] >= minRadius: blobs.append(blob)
+
+        endTime = clock()
+        print(" Total time: %.3f seconds" % (endTime-startTime))
+        print(" Search time: %.3f seconds" % (endTime-startTime - sum(times)))
+        print(" Number of surveys: %d" % len(times))
+        print(" Number of blobs: %d" % len(blobs))
+        print(" Survey time (total): %.3f seconds" % (sum(times)))
+        print(" Survey time (average): %.3f seconds" % (sum(times)/len(times)))
+
+##        for i,t in enumerate(times):
+##            print("Blob %d was surveyed in %.3f seconds." % (i,t))
+
         
-cdEnd = clock()
-print("Total time: %.3f seconds for %d samples. Average time per sample: %.6f seconds." % (cdEnd-cdStart, num, (cdEnd-cdStart)/num))
+##
+##print("Color distance code timing:")
+##cdStart = clock()
+##num = 0
+##for dx in range(xdim//minRadius):
+##    for dy in range(ydim//minRadius):
+##        num += 1
+##        eh = (cD(image[dy*minRadius][dx*minRadius]) <= maxColDis)
+####        col = image[dy*minRadius][dx*minRadius]
+####        eh = (cD(col) == 1)
+##        
+##cdEnd = clock()
+##print("Total time: %.3f seconds for %d samples. Average time per sample: %.6f seconds." % (cdEnd-cdStart, num, (cdEnd-cdStart)/num))
 
 ### Note on different color distance methods:
 ### The difference between Euclidean distance and exact match is on the order
