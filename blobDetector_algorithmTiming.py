@@ -211,7 +211,7 @@ def search_rectQuadsection(blobs, xdim, ydim, spacing=1):
             if not dupe:
                 yield centerX,centerY
 
-        if abs(quad[0][0]-quad[1][0]) > 2*spacing and abs(quad[0][1]-quad[1][1]) > 2*spacing:
+        if abs(quad[0][0]-quad[1][0]) > 2*spacing or abs(quad[0][1]-quad[1][1]) > 2*spacing:
             quads.append([[centerX,centerY],[quad[0][0],quad[0][1]]])
             quads.append([[centerX,centerY],[quad[0][0],quad[1][1]]])
             quads.append([[centerX,centerY],[quad[1][0],quad[0][1]]])
