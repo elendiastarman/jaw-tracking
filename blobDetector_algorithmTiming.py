@@ -270,7 +270,7 @@ def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also
         avgY = (c1[1]+c2[1]+c3[1]+c4[1])/4
         avgR = (c1[2]+c2[2]+c3[2]+c4[2])/4
 
-        c5 = [round(avgX),round(avgY),round(avgR)]
+        c5 = [avgX,avgY,avgR]
         cX,cY,cR = c5
 
         sX = cX
@@ -282,7 +282,7 @@ def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also
         for vert in vertices:
             image[vert[1]][vert[0]] = col(255,0,0)
 
-    return (cX,cY,cR)
+    return (round(cX),round(cY),round(cR))
 
 
 
@@ -300,11 +300,21 @@ origImage, xdim,ydim, frame = getVideoFrame(VIDEO_PATH)
 imgEnd = clock() - imgStart
 print("Time to get frame: %.3f seconds." % imgEnd)
 
+### Search algorithm entries go like this:
+### ['name', function_name, <optional parameter 1>, <opt. param. 2>, <etc>]
+### Functions are expected to take -blobs, xdim, ydim- as their first three args
+### They must -yield- some -sx, sy- to survey
+
 search_algs = [['pixel by pixel', search_pixels],
                ['pixels spaced apart', search_spacedPixels, minRadius],
                ['square spiral', search_squareSpiral, minRadius],
                ['rectangular quadsection', search_rectQuadsection, minRadius],
                ]
+
+### Survey algorithm entries go like this:
+### ['name', function_name, <optional parameter 1>, <opt. param. 2>, <etc>]
+### Functions are expected to take -sx, sy- as their first two args
+### They must -return- a tuple: -(cX,cY,cR)-; that is, blob x,y, and radius
 
 survey_algs = [['flood fill', survey_floodFill],
                ['circumcircle', survey_circumcircle],
@@ -313,16 +323,16 @@ survey_algs = [['flood fill', survey_floodFill],
 for search_alg in search_algs:
     for survey_alg in survey_algs:
 
-        image = deepcopy(origImage)
+        image = deepcopy(origImage) #ensures that flood fill doesn't mess up other algorithms
 
         print()
         print("Search algorithm: %s" % search_alg[0])
         print("Survey algorithm: %s" % survey_alg[0])
 
         startTime = clock()
-        times = []
+        times = [] #for storing survey times
 
-        blobs = []
+        blobs = [] #for storing blobs
         search = search_alg[1](blobs, xdim,ydim, *search_alg[2:])
 
         while 1:
@@ -332,7 +342,7 @@ for search_alg in search_algs:
                 break
 
             surveyStart = clock()
-            blob = survey_alg[1](sx,sy)
+            blob = survey_alg[1](sx,sy, *survey_alg[2:])
             surveyEnd = clock()
             times.append(surveyEnd - surveyStart)
 
