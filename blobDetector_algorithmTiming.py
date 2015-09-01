@@ -6,7 +6,6 @@ from copy import deepcopy
 
 def getVideoFrame(VIDEO_PATH, xdim=800, ydim=600, frame=60):
     FFMPEG_BIN = r"C:\Python33\Lib\ffmpeg-20140713-git-42c1cc3-win64-static\bin\ffmpeg.exe"
-    #r"C:\Users\El'endia Starman\Desktop\My works\Jaw Tracking\Demo vids 1\demovid1_left0001-0075.mp4"
 
     ### get video info
     import subprocess as sp
@@ -15,7 +14,6 @@ def getVideoFrame(VIDEO_PATH, xdim=800, ydim=600, frame=60):
     pipe.stdout.readline()
     pipe.terminate()
     infos = str(pipe.stderr.read())[2:-1]
-##    print(infos)
 
     ### get the frames per second
     end = infos.index("fps")-1
@@ -25,8 +23,7 @@ def getVideoFrame(VIDEO_PATH, xdim=800, ydim=600, frame=60):
     fps = float(infos[beg:end])
 
     ### pick the desired frame
-##    frame = frame
-    Hz = fps#round(fps)
+    Hz = fps
 
     ### calculate timecode from frame and fps
     s = (frame // Hz) % 60
@@ -34,7 +31,6 @@ def getVideoFrame(VIDEO_PATH, xdim=800, ydim=600, frame=60):
     h = (frame // Hz) // 3600
     f = (frame %  Hz) * Hz
     timecode = "%02d:%02d:%02d.%03d" % (h,m,s,f)
-##    print(timecode)
 
     ### set up pipe to get single video frame
     command = [ FFMPEG_BIN,
@@ -58,10 +54,6 @@ def getVideoFrame(VIDEO_PATH, xdim=800, ydim=600, frame=60):
     image = image.reshape((ydim,xdim,3))
     pipe.stdout.flush()
     pipe.terminate()
-
-    ### display image
-    #fig2 = plt.figure(2)
-    #plt.imshow(image)
 
     return image, xdim,ydim, frame
 
@@ -134,8 +126,6 @@ def squareSpiral(startX,startY, spacing, limit):
                 dx -= 1
             elif dx == -level and dy < level:
                 dy += 1
-
-##        print(dx,dy,level)
 
         yield sx+dx*spacing, sy+dy*spacing
 
@@ -251,8 +241,6 @@ def survey_floodFill(sX,sY):
     cX, cY = round(sumX/q), round(sumY/q)
     cR = round(sqrt( q/pi ))
 
-    #image[cY][cX] = col(0,0,255)
-
     return (cX,cY,cR)
 
 def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also "minRadius"
@@ -358,29 +346,7 @@ for search_alg in search_algs:
         print(" Survey time (total): %.3f seconds" % (sum(times)))
         print(" Survey time (average): %.3f seconds" % (sum(times)/len(times)))
 
-##        for i,t in enumerate(times):
-##            print("Blob %d was surveyed in %.3f seconds." % (i,t))
-
-        
-##
-##print("Color distance code timing:")
-##cdStart = clock()
-##num = 0
-##for dx in range(xdim//minRadius):
-##    for dy in range(ydim//minRadius):
-##        num += 1
-##        eh = (cD(image[dy*minRadius][dx*minRadius]) <= maxColDis)
-####        col = image[dy*minRadius][dx*minRadius]
-####        eh = (cD(col) == 1)
-##        
-##cdEnd = clock()
-##print("Total time: %.3f seconds for %d samples. Average time per sample: %.6f seconds." % (cdEnd-cdStart, num, (cdEnd-cdStart)/num))
-
 ### Note on different color distance methods:
 ### The difference between Euclidean distance and exact match is on the order
 ### of 0.02 - 0.03 seconds difference in the total time, which is about 10% of
 ### the total time. Not that much. I'll go with accuracy over speed here.
-
-
-#plt.imshow(image)
-#plt.show()
