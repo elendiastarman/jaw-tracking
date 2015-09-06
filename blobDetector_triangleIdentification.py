@@ -185,8 +185,8 @@ def identifyTriangles(points, debug=0):
                 triCenter2 = list(map(mean, zip(*tris[j][2])))
                 centerDiff = diff(triCenter1, triCenter2)
 
-                tri1m = max([dot(centerDiff, diff(triCenter1, p)) for p in tris[i][2]])
-                tri2m = max([dot(centerDiff, diff(triCenter2, p)) for p in tris[j][2]])
+                tri1m = max([abs(dot(centerDiff, diff(triCenter1, p))) for p in tris[i][2]])
+                tri2m = max([abs(dot(centerDiff, diff(triCenter2, p))) for p in tris[j][2]])
 
                 if tri1m + tri2m > m:
                     m = tri1m + tri2m
@@ -358,7 +358,10 @@ for VIDEO_PATH in VIDEO_PATHs:
                     print("Uh oh! Not enough or too many blobs were detected!")
                     break
 
+                st = clock()
                 tris = identifyTriangles(blobs)
+                et = clock()
+                print("Time to identify triangles: %.6f seconds." % (et-st))
 
                 for t in tris:
                     for k in range(3):
