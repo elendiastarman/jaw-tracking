@@ -22,14 +22,11 @@ def getVideoFrame(VIDEO_PATH, xdim=800, ydim=600, frame=60):
         beg -= 1
     fps = float(infos[beg:end])
 
-    ### pick the desired frame
-    Hz = fps
-
     ### calculate timecode from frame and fps
-    s = (frame // Hz) % 60
-    m = (frame // Hz) // 60 % 60
-    h = (frame // Hz) // 3600
-    f = (frame %  Hz) * Hz
+    s = (frame // fps) % 60
+    m = (frame // fps) // 60 % 60
+    h = (frame // fps) // 3600
+    f = (frame %  fps) * fps
     timecode = "%02d:%02d:%02d.%03d" % (h,m,s,f)
 
     ### set up pipe to get single video frame
@@ -297,14 +294,10 @@ def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also
 
 ### The actual start of the program ###
 
-VIDEO_PATH = r".\Demo vids 1\demovid1_left0001-0075.mp4"
-
 targetColor = [0,255,0]
 cD = colDisSum(targetColor)
 minRadius = 6 #pixels
 maxColDis = 40
-
-origImage, xdim,ydim, frame = getVideoFrame(VIDEO_PATH)
 
 ### Search algorithm entries go like this:
 ### ['name', function_name, <optional parameter 1>, <opt. param. 2>, <etc>]
@@ -313,7 +306,7 @@ origImage, xdim,ydim, frame = getVideoFrame(VIDEO_PATH)
 
 search_algs = [#['pixel by pixel', search_pixels],
                #['pixels spaced apart', search_spacedPixels, minRadius],
-               ['square spiral', search_squareSpiral, minRadius],
+               ['square spiral', search_squareSpiral, minRadius-1],
                #['rectangular quadsection', search_rectQuadsection, minRadius],
                ]
 
@@ -329,41 +322,51 @@ survey_algs = [#['flood fill', survey_floodFill],
 ##plt.imshow(origImage)
 
 n = 0
-for search_alg in search_algs:
-    for survey_alg in survey_algs:
+VIDEO_PATHs = [r".\Demo vids 1\demovid1_left0001-0075.mp4",
+               r".\Demo vids 1\demovid1_top0001-0075.mp4",
+               r".\Demo vids 1\demovid1_right0001-0075.mp4",
+               ]
 
-        n += 1
-        image = deepcopy(origImage) #ensures that flood fill doesn't mess up other algorithms
+for VIDEO_PATH in VIDEO_PATHs:
+    for frame in [0,60]:
 
-        fig = plt.figure(n)
-        sub = fig.add_subplot(111)
-        sub.imshow(image)
+        origImage, xdim,ydim, frame = getVideoFrame(VIDEO_PATH, frame=frame)
 
-        blobs = [] #for storing blobs
-        search = search_alg[1](blobs, xdim,ydim, *search_alg[2:])
+        for search_alg in search_algs:
+            for survey_alg in survey_algs:
 
-        while 1:
-            try:
-                sx,sy = next(search)
-            except StopIteration:
-                break
+                n += 1
+                image = deepcopy(origImage) #ensures that flood fill doesn't mess up other algorithms
 
-            blob = survey_alg[1](sx,sy, *survey_alg[2:])
-            if blob[2] >= minRadius: blobs.append(blob)
+                fig = plt.figure(n)
+                sub = fig.add_subplot(111)
+                sub.imshow(image)
 
-        if len(blobs) != 6:
-            print("Uh oh! Not enough or too many blobs were detected!")
-            break
+                blobs = [] #for storing blobs
+                search = search_alg[1](blobs, xdim,ydim, *search_alg[2:])
 
-        tris = identifyTriangles(blobs)
+                while 1:
+                    try:
+                        sx,sy = next(search)
+                    except StopIteration:
+                        break
 
-        for t in tris:
-            for k in range(3):
-                sub.plot([t[2][k-1][0],t[2][k][0]],
-                         [t[2][k-1][1],t[2][k][1]],
-                         'b-')
+                    blob = survey_alg[1](sx,sy, *survey_alg[2:])
+                    if blob[2] >= minRadius: blobs.append(blob)
 
-        sub.set_xlim([0,xdim])
-        sub.set_ylim([ydim,0])
+                if len(blobs) != 6:
+                    print("Uh oh! Not enough or too many blobs were detected!")
+                    break
+
+                tris = identifyTriangles(blobs)
+
+                for t in tris:
+                    for k in range(3):
+                        sub.plot([t[2][k-1][0],t[2][k][0]],
+                                 [t[2][k-1][1],t[2][k][1]],
+                                 'b-')
+
+                sub.set_xlim([0,xdim])
+                sub.set_ylim([ydim,0])
 
 plt.show()
