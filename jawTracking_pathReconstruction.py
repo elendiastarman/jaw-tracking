@@ -212,33 +212,38 @@ def identifyTriangles(blobs, debug=0):
 
 ### SEARCH ###
 
-def search_squareSpiral(blobs, xdim, ydim, startX=-1, startY=-1, spacing=1):
+def search_squareSpiral(blobs, xdim, ydim, startX=-1, startY=-1, spacing=1, debug=0):
     if startX == -1 or startY == -1:
         startX = xdim//2
         startY = ydim//2
 
     spiral = squareSpiral(startX,startY, spacing, min(xdim,ydim)//(2*spacing)-1)
 
+##    if debug: print(startX,startY)
+
     while 1:
 
         try:
             centerX, centerY = next(spiral)
+##            if debug: print(centerX,centerY)
         except StopIteration:
             return
 
-        #image[centerY][centerX] = col(255,0,0)
+        if 0 <= centerX <= xdim and 0 <= centerY <= ydim:
+##            if debug: image[centerY][centerX] = col(255,0,0)
 
-        goodEnough = (cD(image[centerY][centerX]) <= maxColDis)
+            goodEnough = (cD(image[centerY][centerX]) <= maxColDis)
 
-        if goodEnough:
-            dupe = 0
-            for blob in blobs:
-                if (blob.x-centerX)**2 + (blob.y-centerY)**2 <= blob.r**2*1.5:
-                    dupe = 1
-                    break
+            if goodEnough:
+##                if debug: print('???')
+                dupe = 0
+                for blob in blobs:
+                    if (blob.x-centerX)**2 + (blob.y-centerY)**2 <= blob.r**2*1.5:
+                        dupe = 1
+                        break
 
-            if not dupe:
-                yield centerX, centerY
+                if not dupe:
+                    yield centerX, centerY
 
 
 ### SURVEY ###
@@ -350,7 +355,7 @@ survey_alg = survey_algs[0]
 blobs = []
 
 
-times = 1
+times = 2
 
 while times > 0:
     times -= 1
@@ -361,10 +366,6 @@ while times > 0:
         
         n += 1
         image = deepcopy(origImage) #ensures that flood fill doesn't mess up other algorithms
-
-        fig = plt.figure(n)
-        sub = fig.add_subplot(111)
-        sub.imshow(image)
 
         if frame == 0:
             search = search_alg[1](blobs, xdim,ydim, spacing = search_alg[2])
@@ -383,19 +384,48 @@ while times > 0:
                 break
 
         else:
-            pass
+            tempblobs = []
+            
+            for blob in blobs:
+                image[blob.y][blob.x] = col(255,255,0)
+                
+                search = search_alg[1](tempblobs, xdim,ydim,
+                                       startX = blob.x, startY = blob.y,
+                                       spacing = search_alg[2], debug=1)
+
+                while 1:
+                    try:
+                        sx,sy = next(search)
+                    except StopIteration:
+                        break
+
+                    tempblob = survey_alg[1](sx,sy)
+
+                    if tempblob[2] >= minRadius:
+                        blob.addToPath(tempblob[0],tempblob[1])
+                        tempblobs.append(blob)
+                        break
 
 
 
-        tris = identifyTriangles(blobs)
-        for t in tris:
-            for k in range(3):
-                sub.plot([t[2][k-1][0],t[2][k][0]],
-                         [t[2][k-1][1],t[2][k][1]],
-                         'b-')
+##        tris = identifyTriangles(blobs)
+##        for t in tris:
+##            for k in range(3):
+##                sub.plot([t[2][k-1][0],t[2][k][0]],
+##                         [t[2][k-1][1],t[2][k][1]],
+##                         'b-')
 
-        sub.set_xlim([0,xdim])
-        sub.set_ylim([ydim,0])
+        if times == 0:
+            fig = plt.figure(n)
+            sub = fig.add_subplot(111)
+            sub.imshow(image)
+            
+            for blob in blobs:
+                pathx, pathy = list(zip(*blob.path))
+                sub.plot(pathx, pathy, 'b-')
+
+            sub.set_xlim([0,xdim])
+            sub.set_ylim([ydim,0])
         
 
     for vp in VIDEO_PATHs:
