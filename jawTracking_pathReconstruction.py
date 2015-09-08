@@ -387,7 +387,7 @@ while times > 0:
             tempblobs = []
             
             for blob in blobs:
-                image[blob.y][blob.x] = col(255,255,0)
+##                image[blob.y][blob.x] = col(255,255,0)
                 
                 search = search_alg[1](tempblobs, xdim,ydim,
                                        startX = blob.x, startY = blob.y,
