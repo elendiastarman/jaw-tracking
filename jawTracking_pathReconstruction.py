@@ -13,6 +13,8 @@ class Blob:
 
     def addToPath(self,nx,ny):
         self.path.append( (nx,ny) )
+        self.x = nx
+        self.y = ny
 
     def predict(self):
         if len(self.path) == 1:
@@ -355,7 +357,7 @@ survey_alg = survey_algs[0]
 blobs = []
 
 
-times = 2
+times = 50
 
 while times > 0:
     times -= 1
@@ -388,10 +390,11 @@ while times > 0:
             
             for blob in blobs:
 ##                image[blob.y][blob.x] = col(255,255,0)
+                bx, by = blob.predict()
                 
                 search = search_alg[1](tempblobs, xdim,ydim,
-                                       startX = blob.x, startY = blob.y,
-                                       spacing = search_alg[2], debug=1)
+                                       startX = bx, startY = by,
+                                       spacing = search_alg[2], debug=0)
 
                 while 1:
                     try:
