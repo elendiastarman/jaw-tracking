@@ -25,8 +25,14 @@ class Blob:
                     2*self.path[-1][1]-self.path[-2][1])
 
 class Video:
-    def __init__(self, pathname, pipe, frame, blobs):
-        pass
+    def __init__(self, pathname):
+        self.pathname = pathname
+        self.pipe = getVideoPipe(self.pathname)
+        self.frame = 0
+        self.blobs = []
+
+    def finish(self):
+        self.pipe.terminate()
 
 def getVideoPipe(VIDEO_PATH):
     FFMPEG_BIN = r"C:\Python33\Lib\ffmpeg-20140713-git-42c1cc3-win64-static\bin\ffmpeg.exe"
@@ -343,18 +349,18 @@ survey_algs = [#['flood fill', survey_floodFill],
 
 n = 0
 
-VIDEO_PATHs = [[r".\Demo vids 1\demovid1_left0001-0075.mp4", None,0],
-               #[r".\Demo vids 1\demovid1_top0001-0075.mp4",  None,0],
-               #[r".\Demo vids 1\demovid1_right0001-0075.mp4",None,0],
+VIDEO_PATHs = [r".\Demo vids 1\demovid1_left0001-0075.mp4",
+               r".\Demo vids 1\demovid1_top0001-0075.mp4",
+               r".\Demo vids 1\demovid1_right0001-0075.mp4",
                ]
-for vp in VIDEO_PATHs:
-    vp[1] = getVideoPipe(vp[0])
+videos = []
+
+for pathname in VIDEO_PATHs:
+    videos.append( Video(pathname) )
 
 
 search_alg = search_algs[0]
 survey_alg = survey_algs[0]
-
-blobs = []
 
 
 times = 50
@@ -362,14 +368,12 @@ times = 50
 while times > 0:
     times -= 1
 
-    for pathname, pipe, frame in VIDEO_PATHs:
-        origImage, xdim,ydim = getVideoFrame(pipe)
-        
-        
-        n += 1
+    for v in videos:
+        origImage, xdim,ydim = getVideoFrame(v.pipe)
         image = deepcopy(origImage) #ensures that flood fill doesn't mess up other algorithms
 
-        if frame == 0:
+        if v.frame == 0:
+            blobs = []
             search = search_alg[1](blobs, xdim,ydim, spacing = search_alg[2])
 
             while 1:
@@ -385,10 +389,12 @@ while times > 0:
                 print("Uh oh! Not enough or too many blobs were detected!")
                 break
 
+            v.blobs = blobs
+
         else:
             tempblobs = []
             
-            for blob in blobs:
+            for blob in v.blobs:
 ##                image[blob.y][blob.x] = col(255,255,0)
                 bx, by = blob.predict()
                 
@@ -419,11 +425,13 @@ while times > 0:
 ##                         'b-')
 
         if times == 0:
+            n += 1
+            
             fig = plt.figure(n)
             sub = fig.add_subplot(111)
             sub.imshow(image)
             
-            for blob in blobs:
+            for blob in v.blobs:
                 pathx, pathy = list(zip(*blob.path))
                 sub.plot(pathx, pathy, 'b-')
 
@@ -431,10 +439,10 @@ while times > 0:
             sub.set_ylim([ydim,0])
         
 
-    for vp in VIDEO_PATHs:
-        vp[2] += 1
+    for v in videos:
+        v.frame += 1
 
-for vp in VIDEO_PATHs:
-    vp[1].terminate()
+for v in videos:
+    v.finish()
 
 plt.show()
