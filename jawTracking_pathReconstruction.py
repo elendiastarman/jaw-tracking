@@ -459,7 +459,7 @@ for v in videos:
 
 endTime = clock()
 
-print("(Time spent reading in frame image data is excluded.)")
+print("(Time spent reading in frame image data (%.3f seconds) is excluded.)" % getFrameTimeTotal)
 totalTime = endTime-startTime - getFrameTimeTotal
 
 print("Total time for %d frames: %.3f seconds." % (times, totalTime))
