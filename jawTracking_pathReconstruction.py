@@ -238,7 +238,7 @@ def search_squareSpiral(blobs, xdim, ydim, startX=-1, startY=-1, spacing=1, debu
             return
 
         if 0 <= centerX <= xdim and 0 <= centerY <= ydim:
-##            if debug: image[centerY][centerX] = col(255,0,0)
+            if debug: image[centerY][centerX] = col(255,0,0)
 
             goodEnough = (cD(image[centerY][centerX]) <= maxColDis)
 
@@ -318,7 +318,7 @@ def survey_circumcircle(sX,sY, numIterations=3, showVerts=0): #showVerts is also
         for vert in vertices:
             image[vert[1]][vert[0]] = col(255,0,0)
 
-    return (round(cX),round(cY),round(cR))
+    return (cX,cY,cR)
 
 
 
@@ -362,17 +362,26 @@ for pathname in VIDEO_PATHs:
 search_alg = search_algs[0]
 survey_alg = survey_algs[0]
 
+firstFrameTimeTotal = 0
+getFrameTimeTotal = 0
 
-times = 50
+startTime = clock()
 
-while times > 0:
-    times -= 1
+times = counter = 50
+
+while counter > 0:
+    counter -= 1
 
     for v in videos:
+        st = clock()
         origImage, xdim,ydim = getVideoFrame(v.pipe)
         image = deepcopy(origImage) #ensures that flood fill doesn't mess up other algorithms
+        et = clock()
+        getFrameTimeTotal += (et-st)
 
         if v.frame == 0:
+            st = clock()
+            
             blobs = []
             search = search_alg[1](blobs, xdim,ydim, spacing = search_alg[2])
 
@@ -391,16 +400,19 @@ while times > 0:
 
             v.blobs = blobs
 
+            et = clock()
+            print("Time for first frame: %.3f seconds." % (et-st))
+            firstFrameTimeTotal += (et-st)
+
         else:
             tempblobs = []
             
             for blob in v.blobs:
-##                image[blob.y][blob.x] = col(255,255,0)
                 bx, by = blob.predict()
                 
                 search = search_alg[1](tempblobs, xdim,ydim,
-                                       startX = bx, startY = by,
-                                       spacing = search_alg[2], debug=0)
+                                       startX = round(bx), startY = round(by),
+                                       spacing = 2, debug=0)
 
                 while 1:
                     try:
@@ -424,7 +436,7 @@ while times > 0:
 ##                         [t[2][k-1][1],t[2][k][1]],
 ##                         'b-')
 
-        if times == 0:
+        if counter == 0:
             n += 1
             
             fig = plt.figure(n)
@@ -444,5 +456,15 @@ while times > 0:
 
 for v in videos:
     v.finish()
+
+endTime = clock()
+
+print("(Time spent reading in frame image data is excluded.)")
+totalTime = endTime-startTime - getFrameTimeTotal
+
+print("Total time for %d frames: %.3f seconds." % (times, totalTime))
+print("Time spent on first frames only: %.3f seconds." % firstFrameTimeTotal)
+print("Remaining time: %.3f seconds." % (totalTime - firstFrameTimeTotal))
+print("Average time per non-first frame: %.3f seconds." % ((totalTime - firstFrameTimeTotal)/(3*times-3)))
 
 plt.show()
